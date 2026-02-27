@@ -1,0 +1,9 @@
+# R2 storage profile. Set gjira.storage.type=r2 and include R2 credentials.
+gjira:
+  storage:
+    type: r2
+    r2:
+      endpoint: https://<account-id>.r2.cloudflarestorage.com
+      bucket: gjira-static
+      access-key-id: ${R2_ACCESS_KEY_ID:}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY:}

@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StandardInteractionFormat",
+  "type": "object",
+  "required": ["id", "tenant_id", "stream_type", "source_type", "source_id", "event_ts", "content", "content_hash"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "stream_type": { "enum": ["DYNAMIC", "STATIC"] },
+    "source_type": { "enum": ["slack", "teams", "zoom", "confluence", "sharepoint", "upload"] },
+    "source_id": { "type": "string", "maxLength": 255 },
+    "event_ts": { "type": "string", "format": "date-time" },
+    "content": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" },
+        "metadata": { "type": "object" }
+      }
+    },
+    "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
