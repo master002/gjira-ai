@@ -1,0 +1,11 @@
+# Docker Compose profile (PostgreSQL)
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:db}:5432/${DB_NAME:gjira}
+    username: ${DB_USER:gjira}
+    password: ${DB_PASSWORD:gjira}
+    driver-class-name: org.postgresql.Driver
+gjira:
+  storage:
+    type: local
+    base-path: /data/gjira
