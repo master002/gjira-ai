@@ -28,6 +28,15 @@ gjira:
   storage:
     type: local
     base-path: ./data/gjira
+    
+gjira:
+  sharepoint:
+    enabled: true
+    tenant-id: ${SP_TENANT_ID}
+    client-id: ${SP_CLIENT_ID}
+    client-secret: ${SP_CLIENT_SECRET}
+  storage:
+    type: r2 # Set to r2 for production-grade zero egress
 
 management:
   endpoints:

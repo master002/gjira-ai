@@ -92,28 +92,34 @@ public class VectorizationPipeline {
     }
 
     private void persistStatic(StandardInteractionFormat format) {
+        // 1. CHECK MANIFEST FOR DELTA (Cost-Obsessed Rule)
         var manifestOpt = manifestRepo.findByTenantIdAndSourceTypeAndSourceId(
                 format.tenantId().toString(), format.sourceType().name(), format.sourceId());
+
         if (manifestOpt.isPresent() && manifestOpt.get().getContentHash().equals(format.contentHash())) {
-            log.debug("Static skip (unchanged): tenant={} source_type={} source_id={}",
-                    format.tenantId(), format.sourceType(), format.sourceId());
+            log.info("Cost-Decay Trigger: Skipping vectorization for unchanged content (tenant={}, source={})", 
+                    format.tenantId(), format.sourceId());
             return;
         }
 
         String text = format.content().text();
         if (text == null || text.isBlank()) return;
 
-        staticRepo.deleteByTenantIdAndSourceTypeAndSourceId(format.tenantId().toString(), format.sourceType().name(), format.sourceId());
+        // 2. PURGE OLD VECTORS ONLY ON CHANGE
+        staticRepo.deleteByTenantIdAndSourceTypeAndSourceId(
+                format.tenantId().toString(), format.sourceType().name(), format.sourceId());
 
+        // 3. ARCHIVE TO R2 (Zero-Egress Strategy)
         String filePath = format.sourceId() + "_STATIC.txt";
         storageService.store(format.tenantId(), filePath, text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
+        // 4. CHUNK AND EMBED
+        var chunks = ChunkUtils.chunk(text, CHUNK_SIZE);
         String metadataJson = serializeMetadata(format.content().metadata());
 
-        var chunks = ChunkUtils.chunk(text, CHUNK_SIZE);
         for (int i = 0; i < chunks.size(); i++) {
             String chunk = chunks.get(i);
-            float[] embedding = embeddingService.embed(chunk);
+            float[] embedding = embeddingService.embed(chunk); // Costly operation saved by step 1
             var entity = new StaticLibraryVectorEntity(
                     null, format.tenantId().toString(), format.sourceType().name(), format.sourceId(),
                     i, format.contentHash(), chunk, embedding, filePath, Instant.now(), metadataJson
@@ -121,10 +127,9 @@ public class VectorizationPipeline {
             staticRepo.save(entity);
         }
 
+        // 5. UPDATE MANIFEST
         manifestRepo.upsert(format.tenantId().toString(), format.sourceType().name(), format.sourceId(),
                 format.contentHash(), filePath, format.eventTs());
-        log.debug("Persisted {} static chunks for tenant={} source={}", chunks.size(),
-                format.tenantId(), format.sourceId());
     }
 
     private String serializeMetadata(Map<String, Object> metadata) {
